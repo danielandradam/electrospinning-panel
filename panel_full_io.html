@@ -1,0 +1,123 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Electrospinning Panel - Full I/O</title>
+  <style>
+    body{font-family:Inter,Arial;background:#071226;color:#e6eef3;padding:18px}
+    .card{background:#0b1220;padding:14px;border-radius:8px;max-width:980px;margin:auto}
+    .pin{display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid rgba(255,255,255,0.03)}
+    .btn{padding:6px 10px;border-radius:6px;background:#122;color:#e6eef3;cursor:pointer;border:0}
+    .on{background:#1a5}
+    .timer{font-weight:700;color:#ffd166;margin-left:8px}
+    h2{margin-top:0}
+    .muted{color:#9aa6b2;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Electrospinning Control Panel (Full I/O)</h2>
+    <div id="ip">Conexão: Firebase online — IP local: <span id="localip">--</span></div>
+    <div class="muted">Nota: D8 (GPIO15) exige cuidado — deve permanecer LOW no boot.</div>
+    <hr/>
+    <div>Analog A0: <span id="a0">--</span> — <span id="volt">-- V</span></div>
+    <hr/>
+    <div class="pin"><div>D0</div><button id="btn-d0" class="btn">Toggle</button></div>
+    <div class="pin"><div>D1 <span class="timer" id="timer-d1">00:00:00</span></div><button id="btn-d1" class="btn">Toggle</button></div>
+    <div class="pin"><div>D2 <span class="timer" id="timer-d2">00:00:00</span></div><button id="btn-d2" class="btn">Toggle</button></div>
+    <div class="pin"><div>D3</div><button id="btn-d3" class="btn">Toggle</button></div>
+    <div class="pin"><div>D4 (LED)</div><button id="btn-d4" class="btn">Toggle</button></div>
+    <div class="pin"><div>D5</div><button id="btn-d5" class="btn">Toggle</button></div>
+    <div class="pin"><div>D6</div><button id="btn-d6" class="btn">Toggle</button></div>
+    <div class="pin"><div>D7</div><button id="btn-d7" class="btn">Toggle</button></div>
+    <div class="pin"><div>D8 (boot LOW)</div><button id="btn-d8" class="btn">Toggle</button></div>
+    <div class="pin"><div>LED Interno</div><button id="btn-led" class="btn">Toggle</button></div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <script>
+    var firebaseConfig = {
+      apiKey: "AIzaSyAatJ7zCMGoDPQTdsKOJIwP8pp739_j62c",
+      authDomain: "eletrospinnig.firebaseapp.com",
+      databaseURL: "https://eletrospinnig-default-rtdb.firebaseio.com",
+      projectId: "eletrospinnig",
+      storageBucket: "eletrospinnig.firebasestorage.app",
+      messagingSenderId: "880625441630",
+      appId: "1:880625441630:web:bf2c5e07705cf1716bcdcf",
+      measurementId: "G-0R8X4WP358"
+    };
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.database();
+
+    // elements
+    const localIpEl = document.getElementById('localip');
+    const a0El = document.getElementById('a0');
+    const voltEl = document.getElementById('volt');
+
+    const btnD0 = document.getElementById('btn-d0');
+    const btnD1 = document.getElementById('btn-d1');
+    const btnD2 = document.getElementById('btn-d2');
+    const btnD3 = document.getElementById('btn-d3');
+    const btnD4 = document.getElementById('btn-d4');
+    const btnD5 = document.getElementById('btn-d5');
+    const btnD6 = document.getElementById('btn-d6');
+    const btnD7 = document.getElementById('btn-d7');
+    const btnD8 = document.getElementById('btn-d8');
+    const btnLED = document.getElementById('btn-led');
+
+    const tD1 = document.getElementById('timer-d1');
+    const tD2 = document.getElementById('timer-d2');
+
+    db.ref('/state').on('value', snap => {
+      const s = snap.val() || {};
+      if (s.ip) localIpEl.innerText = s.ip;
+
+      if (s.a0 !== undefined) {
+        a0El.innerText = s.a0;
+        let v = (3.3 * Number(s.a0)) / 1023.0;
+        voltEl.innerText = v.toFixed(2) + " V";
+      }
+
+      if (s.d0) btnD0.classList.add('on'); else btnD0.classList.remove('on');
+      if (s.d1) btnD1.classList.add('on'); else btnD1.classList.remove('on');
+      if (s.d2) btnD2.classList.add('on'); else btnD2.classList.remove('on');
+      if (s.d3) btnD3.classList.add('on'); else btnD3.classList.remove('on');
+      if (s.d4) btnD4.classList.add('on'); else btnD4.classList.remove('on');
+      if (s.d5) btnD5.classList.add('on'); else btnD5.classList.remove('on');
+      if (s.d6) btnD6.classList.add('on'); else btnD6.classList.remove('on');
+      if (s.d7) btnD7.classList.add('on'); else btnD7.classList.remove('on');
+      if (s.d8) btnD8.classList.add('on'); else btnD8.classList.remove('on');
+      if (s.led) btnLED.classList.add('on'); else btnLED.classList.remove('on');
+    });
+
+    db.ref('/timers').on('value', snap => {
+      const t = snap.val() || {};
+      if (t.d1) tD1.innerText = t.d1;
+      if (t.d2) tD2.innerText = t.d2;
+    });
+
+    function sendCmd(pin, cmd){
+      db.ref('/commands/' + pin).set(cmd);
+    }
+
+    btnD0.onclick = () => sendCmd('d0','toggle');
+    btnD1.onclick = () => sendCmd('d1','toggle');
+    btnD2.onclick = () => sendCmd('d2','toggle');
+    btnD3.onclick = () => sendCmd('d3','toggle');
+    btnD4.onclick = () => sendCmd('d4','toggle');
+    btnD5.onclick = () => sendCmd('d5','toggle');
+    btnD6.onclick = () => sendCmd('d6','toggle');
+    btnD7.onclick = () => sendCmd('d7','toggle');
+    btnD8.onclick = () => sendCmd('d8','toggle');
+    btnLED.onclick = () => sendCmd('led','toggle');
+
+    setInterval(()=>{
+      db.ref('/meta/last_panel_ping').set(Date.now());
+    },7000);
+  </script>
+</body>
+</html>
