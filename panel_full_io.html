@@ -3,166 +3,224 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Status do Sistema - Wemos D1 mini + A4988</title>
+  <title>Status do Sistema - A4988 / eduroam</title>
   <style>
     :root{
-      --bg:#0b1020;
-      --card:#121a2b;
-      --card2:#18233a;
-      --text:#ebf2ff;
-      --muted:#9db0d0;
-      --ok:#16c47f;
-      --warn:#f5b700;
-      --bad:#ff5d73;
+      --bg:#0b1220;
+      --panel:#121b2f;
+      --panel2:#17233c;
       --line:rgba(255,255,255,.08);
+      --text:#edf3ff;
+      --muted:#9db0d0;
+      --ok:#25c281;
+      --warn:#f0b429;
+      --bad:#ef5b75;
+      --shadow:0 10px 30px rgba(0,0,0,.25);
     }
     *{box-sizing:border-box}
-    body{margin:0;background:linear-gradient(180deg,#0a1020,#11192d);color:var(--text);font:15px/1.4 Arial,Helvetica,sans-serif}
-    .wrap{max-width:1100px;margin:0 auto;padding:20px}
-    h1{margin:0 0 8px;font-size:28px}
-    .muted{color:var(--muted)}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:18px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.22)}
-    .card h2{margin:0 0 12px;font-size:17px}
-    .row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+    body{
+      margin:0;
+      font:15px/1.45 Arial, Helvetica, sans-serif;
+      color:var(--text);
+      background:linear-gradient(180deg,#09111f,#10182a 55%,#0d1524);
+    }
+    .wrap{max-width:1200px;margin:0 auto;padding:24px}
+    .title{margin:0 0 6px;font-size:28px}
+    .subtitle{color:var(--muted);margin:0 0 20px}
+    .layout{
+      display:grid;
+      grid-template-columns:1.35fr .85fr;
+      gap:18px;
+      align-items:start;
+    }
+    .card{
+      background:linear-gradient(180deg,var(--panel),var(--panel2));
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      padding:18px;
+      min-height:420px;
+    }
+    .card h2{margin:0 0 14px;font-size:20px}
+    .row{
+      display:grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap:14px;
+      padding:10px 0;
+      border-bottom:1px solid var(--line);
+      align-items:center;
+    }
     .row:last-child{border-bottom:none}
     .key{color:var(--muted)}
     .val{font-weight:700;text-align:right;word-break:break-word}
-    .badge{display:inline-block;padding:4px 10px;border-radius:999px;font-weight:700;font-size:12px}
-    .ok{background:rgba(22,196,127,.15);color:#74efb7}
-    .warn{background:rgba(245,183,0,.14);color:#ffd76a}
-    .bad{background:rgba(255,93,115,.15);color:#ff9baa}
-    .hero{background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:18px}
-    .hero .line{margin-top:6px}
-    .small{font-size:12px}
+    .badge{
+      display:inline-block;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:700;
+    }
+    .ok{background:rgba(37,194,129,.16);color:#7ff0bd}
+    .warn{background:rgba(240,180,41,.18);color:#ffd77a}
+    .bad{background:rgba(239,91,117,.18);color:#ffb0bf}
+    .big{
+      font-size:34px;
+      font-weight:800;
+      letter-spacing:.5px;
+      margin:8px 0 14px;
+    }
+    .metaBox{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:14px;
+      margin-bottom:14px;
+      background:rgba(255,255,255,.02);
+    }
+    .small{font-size:13px;color:var(--muted)}
+    .rightGrid{display:grid;gap:14px}
+    @media (max-width: 900px){
+      .layout{grid-template-columns:1fr}
+      .card{min-height:auto}
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="hero">
-      <h1>Status do sistema</h1>
-      <div class="muted">Página em modo somente leitura. Sem envio de comandos para o ESP.</div>
-      <div class="line small">Firebase em tempo real para monitoramento do Wemos D1 mini + A4988.</div>
-    </div>
+    <h1 class="title">Monitor de status do sistema</h1>
+    <p class="subtitle">Somente leitura. Atualização aproximada a cada 10 segundos.</p>
 
-    <div class="grid">
-      <div class="card">
-        <h2>Conectividade</h2>
-        <div class="row"><div class="key">Wi‑Fi</div><div class="val" id="wifi_status">--</div></div>
-        <div class="row"><div class="key">SSID</div><div class="val" id="wifi_ssid">--</div></div>
-        <div class="row"><div class="key">IP local</div><div class="val" id="ip">--</div></div>
-        <div class="row"><div class="key">RSSI</div><div class="val" id="wifi_rssi">--</div></div>
-        <div class="row"><div class="key">Última atualização</div><div class="val" id="last_update">--</div></div>
-      </div>
+    <div class="layout">
+      <section class="card">
+        <h2>Status do sistema</h2>
 
-      <div class="card">
-        <h2>Estado geral</h2>
+        <div class="row"><div class="key">Dispositivo</div><div class="val" id="device">--</div></div>
         <div class="row"><div class="key">Modo</div><div class="val" id="mode">--</div></div>
-        <div class="row"><div class="key">Motor habilitado</div><div class="val" id="motor_enabled">--</div></div>
+        <div class="row"><div class="key">Motor</div><div class="val" id="motor_enabled">--</div></div>
         <div class="row"><div class="key">Rotação contínua</div><div class="val" id="continuous_running">--</div></div>
-        <div class="row"><div class="key">Movendo para alvo</div><div class="val" id="moving_to_target">--</div></div>
+        <div class="row"><div class="key">Movimento até alvo</div><div class="val" id="moving_to_target">--</div></div>
         <div class="row"><div class="key">Fim de curso</div><div class="val" id="endstop_active">--</div></div>
         <div class="row"><div class="key">Buzzer</div><div class="val" id="buzzer_on">--</div></div>
-      </div>
-
-      <div class="card">
-        <h2>Motor</h2>
-        <div class="row"><div class="key">Velocidade alvo</div><div class="val" id="last_speed">--</div></div>
+        <div class="row"><div class="key">Velocidade configurada</div><div class="val" id="last_speed">--</div></div>
         <div class="row"><div class="key">Velocidade atual</div><div class="val" id="current_speed_runtime">--</div></div>
         <div class="row"><div class="key">Aceleração</div><div class="val" id="acceleration">--</div></div>
         <div class="row"><div class="key">Posição atual</div><div class="val" id="current_position">--</div></div>
         <div class="row"><div class="key">Distância restante</div><div class="val" id="distance_to_go">--</div></div>
-        <div class="row"><div class="key">Vel. máxima</div><div class="val" id="max_motor_speed">--</div></div>
-      </div>
-
-      <div class="card">
-        <h2>Entradas / saídas</h2>
         <div class="row"><div class="key">Potenciômetro (A0)</div><div class="val" id="pot_value">--</div></div>
-        <div class="row"><div class="key">Leitura A0 crua</div><div class="val" id="a0_raw">--</div></div>
-        <div class="row"><div class="key">D4 LED</div><div class="val" id="pin_d4_led">--</div></div>
-        <div class="row"><div class="key">D5 chave</div><div class="val" id="pin_d5_switch">--</div></div>
-        <div class="row"><div class="key">D6 fim de curso</div><div class="val" id="pin_d6_endstop">--</div></div>
-        <div class="row"><div class="key">D7 enable</div><div class="val" id="pin_d7_enable">--</div></div>
-      </div>
+        <div class="row"><div class="key">Pino D5 / seletor</div><div class="val" id="pin_d5_switch">--</div></div>
+        <div class="row"><div class="key">Pino D6 / fim de curso</div><div class="val" id="pin_d6_endstop">--</div></div>
+        <div class="row"><div class="key">Pino D7 / enable</div><div class="val" id="pin_d7_enable">--</div></div>
+      </section>
+
+      <aside class="rightGrid">
+        <section class="card">
+          <h2>Tempo e conexão</h2>
+
+          <div class="metaBox">
+            <div class="small">Hora local do navegador</div>
+            <div class="big" id="clock">--:--:--</div>
+          </div>
+
+          <div class="metaBox">
+            <div class="small">Status da leitura</div>
+            <div id="page_status">--</div>
+          </div>
+
+          <div class="row"><div class="key">Wi‑Fi no ESP</div><div class="val" id="wifi_status">--</div></div>
+          <div class="row"><div class="key">SSID</div><div class="val" id="wifi_ssid">--</div></div>
+          <div class="row"><div class="key">IP local</div><div class="val" id="ip">--</div></div>
+          <div class="row"><div class="key">RSSI</div><div class="val" id="wifi_rssi">--</div></div>
+          <div class="row"><div class="key">Última atualização do ESP</div><div class="val" id="updated_seconds">--</div></div>
+          <div class="row"><div class="key">Idade dos dados</div><div class="val" id="data_age">--</div></div>
+          <div class="row"><div class="key">Próxima leitura da página</div><div class="val" id="next_refresh">--</div></div>
+        </section>
+      </aside>
     </div>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyAatJ7zCMGoDPQTdsKOJIwP8pp739_j62c",
-      authDomain: "eletrospinnig.firebaseapp.com",
-      databaseURL: "https://eletrospinnig-default-rtdb.firebaseio.com",
-      projectId: "eletrospinnig",
-      storageBucket: "eletrospinnig.firebasestorage.app",
-      messagingSenderId: "880625441630",
-      appId: "1:880625441630:web:bf2c5e07705cf1716bcdcf",
-      measurementId: "G-0R8X4WP358"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const DB_URL = 'https://eletrospinnig-default-rtdb.firebaseio.com/monitor.json';
+    const REFRESH_MS = 10000;
+    let nextRefreshAt = Date.now() + REFRESH_MS;
 
     function setText(id, value){
       const el = document.getElementById(id);
       if (!el) return;
-      el.textContent = (value === undefined || value === null || value === "") ? "--" : value;
+      el.textContent = (value === undefined || value === null || value === '') ? '--' : value;
     }
 
-    function badge(value, goodText="ATIVO", badText="INATIVO"){
-      const cls = value ? 'badge ok' : 'badge bad';
-      const txt = value ? goodText : badText;
-      return `<span class="${cls}">${txt}</span>`;
+    function badge(text, cls){
+      return `<span class="badge ${cls}">${text}</span>`;
     }
 
-    function boolDisplay(id, value, t1="ATIVO", t0="INATIVO"){
+    function setHtml(id, html){
       const el = document.getElementById(id);
       if (!el) return;
-      el.innerHTML = badge(!!value, t1, t0);
+      el.innerHTML = html;
     }
 
-    function wifiDisplay(value){
-      const el = document.getElementById('wifi_status');
-      if (!el) return;
-      const ok = value === 'CONNECTED';
-      el.innerHTML = `<span class="badge ${ok ? 'ok' : 'bad'}">${value || '--'}</span>`;
+    function formatBool(v, t='SIM', f='NÃO'){
+      return v ? badge(t, 'ok') : badge(f, 'bad');
     }
 
-    db.ref('/state').on('value', snap => {
-      const s = snap.val() || {};
+    function updateClock(){
+      const now = new Date();
+      setText('clock', now.toLocaleTimeString('pt-BR'));
 
-      wifiDisplay(s.wifi_status);
-      setText('wifi_ssid', s.wifi_ssid);
-      setText('ip', s.ip);
-      setText('wifi_rssi', s.wifi_rssi !== undefined ? `${s.wifi_rssi} dBm` : '--');
+      const remain = Math.max(0, nextRefreshAt - Date.now());
+      setText('next_refresh', `${Math.ceil(remain/1000)} s`);
+    }
 
-      setText('mode', s.mode);
-      boolDisplay('motor_enabled', s.motor_enabled, 'LIGADO', 'DESLIGADO');
-      boolDisplay('continuous_running', s.continuous_running, 'SIM', 'NÃO');
-      boolDisplay('moving_to_target', s.moving_to_target, 'SIM', 'NÃO');
-      boolDisplay('endstop_active', s.endstop_active, 'ACIONADO', 'LIVRE');
-      boolDisplay('buzzer_on', s.buzzer_on, 'LIGADO', 'DESLIGADO');
+    async function loadStatus(){
+      try {
+        setHtml('page_status', badge('LENDO DADOS', 'warn'));
+        const url = `${DB_URL}?_=${Date.now()}`;
+        const resp = await fetch(url, { cache: 'no-store' });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const s = await resp.json() || {};
 
-      setText('last_speed', s.last_speed !== undefined ? `${s.last_speed} passos/s` : '--');
-      setText('current_speed_runtime', s.current_speed_runtime !== undefined ? `${s.current_speed_runtime} passos/s` : '--');
-      setText('acceleration', s.acceleration !== undefined ? `${s.acceleration} passos/s²` : '--');
-      setText('current_position', s.current_position);
-      setText('distance_to_go', s.distance_to_go);
-      setText('max_motor_speed', s.max_motor_speed !== undefined ? `${s.max_motor_speed} passos/s` : '--');
+        setText('device', s.device);
+        setText('mode', s.mode);
+        setHtml('motor_enabled', formatBool(!!s.motor_enabled, 'LIGADO', 'DESLIGADO'));
+        setHtml('continuous_running', formatBool(!!s.continuous_running));
+        setHtml('moving_to_target', formatBool(!!s.moving_to_target));
+        setHtml('endstop_active', s.endstop_active ? badge('ACIONADO', 'bad') : badge('LIVRE', 'ok'));
+        setHtml('buzzer_on', formatBool(!!s.buzzer_on, 'LIGADO', 'DESLIGADO'));
+        setText('last_speed', s.last_speed !== undefined ? `${s.last_speed} passos/s` : '--');
+        setText('current_speed_runtime', s.current_speed_runtime !== undefined ? `${s.current_speed_runtime} passos/s` : '--');
+        setText('acceleration', s.acceleration !== undefined ? `${s.acceleration} passos/s²` : '--');
+        setText('current_position', s.current_position);
+        setText('distance_to_go', s.distance_to_go);
+        setText('pot_value', s.pot_value);
+        setHtml('pin_d5_switch', s.pin_d5_switch ? badge('HIGH / SERIAL', 'warn') : badge('LOW / POT', 'ok'));
+        setHtml('pin_d6_endstop', s.pin_d6_endstop ? badge('HIGH', 'ok') : badge('LOW', 'warn'));
+        setHtml('pin_d7_enable', s.pin_d7_enable ? badge('HIGH / DESABIL.', 'bad') : badge('LOW / HABIL.', 'ok'));
 
-      setText('pot_value', s.pot_value);
-      setText('a0_raw', s.a0_raw);
-      boolDisplay('pin_d4_led', s.pin_d4_led, 'HIGH', 'LOW');
-      boolDisplay('pin_d5_switch', s.pin_d5_switch, 'SERIAL (HIGH)', 'POT (LOW)');
-      boolDisplay('pin_d6_endstop', s.pin_d6_endstop, 'HIGH', 'LOW');
-      boolDisplay('pin_d7_enable', s.pin_d7_enable, 'HIGH', 'LOW');
-    });
+        setHtml('wifi_status', s.wifi_status === 'CONNECTED' ? badge('CONECTADO', 'ok') : badge('DESCONECTADO', 'bad'));
+        setText('wifi_ssid', s.wifi_ssid);
+        setText('ip', s.ip);
+        setText('wifi_rssi', s.wifi_rssi !== undefined ? `${s.wifi_rssi} dBm` : '--');
+        setText('updated_seconds', s.updated_seconds !== undefined ? `${s.updated_seconds} s (millis/1000)` : '--');
 
-    db.ref('/meta/last_update_ms').on('value', snap => {
-      const v = snap.val();
-      setText('last_update', v !== null && v !== undefined ? `${v} ms` : '--');
-    });
+        if (s.updated_ms !== undefined) {
+          const age = Math.max(0, Math.round((Date.now() - performance.timeOrigin - s.updated_ms) / 1000));
+          setText('data_age', `${age} s aprox.`);
+        } else {
+          setText('data_age', '--');
+        }
+
+        setHtml('page_status', badge('LEITURA OK', 'ok'));
+      } catch (err) {
+        console.error(err);
+        setHtml('page_status', badge('FALHA NA LEITURA', 'bad'));
+      } finally {
+        nextRefreshAt = Date.now() + REFRESH_MS;
+      }
+    }
+
+    updateClock();
+    loadStatus();
+    setInterval(updateClock, 1000);
+    setInterval(loadStatus, REFRESH_MS);
   </script>
 </body>
 </html>
