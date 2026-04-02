@@ -1,123 +1,176 @@
 <!doctype html>
-<html>
+<html lang="pt-BR">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Electrospinning Panel - Full I/O</title>
+  <title>Painel A4988 + Eduroam + Firebase</title>
   <style>
-    body{font-family:Inter,Arial;background:#071226;color:#e6eef3;padding:18px}
-    .card{background:#0b1220;padding:14px;border-radius:8px;max-width:980px;margin:auto}
-    .pin{display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid rgba(255,255,255,0.03)}
-    .btn{padding:6px 10px;border-radius:6px;background:#122;color:#e6eef3;cursor:pointer;border:0}
-    .on{background:#1a5}
-    .timer{font-weight:700;color:#ffd166;margin-left:8px}
-    h2{margin-top:0}
-    .muted{color:#9aa6b2;font-size:13px}
+    body{font-family:Arial,sans-serif;background:#0b1220;color:#e8eef5;margin:0;padding:18px}
+    .wrap{max-width:1100px;margin:auto}
+    .card{background:#121b2b;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+    h1,h2{margin:.2rem 0 1rem}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+    .status{background:#0f1724;border-radius:10px;padding:10px}
+    .label{font-size:12px;color:#97a6ba;text-transform:uppercase;letter-spacing:.04em}
+    .value{font-size:20px;font-weight:700;margin-top:4px;word-break:break-word}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    button{background:#1f6feb;color:#fff;border:0;border-radius:8px;padding:10px 14px;cursor:pointer}
+    button.secondary{background:#374151}
+    button.warn{background:#b91c1c}
+    input{background:#0f1724;color:#e8eef5;border:1px solid #30425d;border-radius:8px;padding:10px}
+    .full{width:100%;box-sizing:border-box}
+    .mono{font-family:Consolas,monospace}
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#22324b;font-size:12px}
+    .ok{background:#14532d}.bad{background:#7f1d1d}
+    .muted{color:#9fb0c7}
   </style>
 </head>
 <body>
+<div class="wrap">
   <div class="card">
-    <h2>Electrospinning Control Panel (Full I/O)</h2>
-    <div id="ip">Conexão: Firebase online — IP local: <span id="localip">--</span></div>
-    <div class="muted">Nota: D8 (GPIO15) exige cuidado — deve permanecer LOW no boot.</div>
-    <hr/>
-    <div>Analog A0: <span id="a0">--</span> — <span id="volt">-- V</span></div>
-    <hr/>
-    <div class="pin"><div>D0</div><button id="btn-d0" class="btn">Toggle</button></div>
-    <div class="pin"><div>D1 <span class="timer" id="timer-d1">00:00:00</span></div><button id="btn-d1" class="btn">Toggle</button></div>
-    <div class="pin"><div>D2 <span class="timer" id="timer-d2">00:00:00</span></div><button id="btn-d2" class="btn">Toggle</button></div>
-    <div class="pin"><div>D3</div><button id="btn-d3" class="btn">Toggle</button></div>
-    <div class="pin"><div>D4 (LED)</div><button id="btn-d4" class="btn">Toggle</button></div>
-    <div class="pin"><div>D5</div><button id="btn-d5" class="btn">Toggle</button></div>
-    <div class="pin"><div>D6</div><button id="btn-d6" class="btn">Toggle</button></div>
-    <div class="pin"><div>D7</div><button id="btn-d7" class="btn">Toggle</button></div>
-    <div class="pin"><div>D8 (boot LOW)</div><button id="btn-d8" class="btn">Toggle</button></div>
-    <div class="pin"><div>LED Interno</div><button id="btn-led" class="btn">Toggle</button></div>
+    <h1>Painel Web — A4988 + Eduroam + Firebase</h1>
+    <div class="row">
+      <span id="wifiPill" class="pill">Wi‑Fi: --</span>
+      <span class="pill">IP: <span id="ip" class="mono">--</span></span>
+      <span class="pill">Modo: <span id="modeText">--</span></span>
+      <span class="pill">Motor: <span id="motorText">--</span></span>
+    </div>
+    <p class="muted">A chave D5 continua definindo o modo físico do sistema: <b>HIGH = SERIAL/WEB</b> e <b>LOW = POTENCIÔMETRO</b>. A página envia exatamente os mesmos comandos seriais do firmware.</p>
   </div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <div class="card">
+    <h2>Comandos</h2>
+    <div class="row">
+      <input id="cmdInput" class="full mono" placeholder="Digite um comando serial, por exemplo: on, s500, a300, go, x, m200, p1000, z, ?, wifi, ip, reconnect">
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button onclick="sendTypedCommand()">Enviar comando</button>
+      <button class="secondary" onclick="sendCmd('on')">on</button>
+      <button class="secondary" onclick="sendCmd('off')">off</button>
+      <button class="secondary" onclick="sendCmd('go')">go</button>
+      <button class="warn" onclick="sendCmd('x')">x</button>
+      <button class="secondary" onclick="sendCmd('z')">z</button>
+      <button class="secondary" onclick="sendCmd('?')">?</button>
+      <button class="secondary" onclick="sendCmd('wifi')">wifi</button>
+      <button class="secondary" onclick="sendCmd('ip')">ip</button>
+      <button class="secondary" onclick="sendCmd('reconnect')">reconnect</button>
+      <button class="secondary" onclick="refreshStatus()">Atualizar status</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input id="speedInput" type="number" placeholder="Velocidade ex.: 500">
+      <button onclick="sendCmd('s' + document.getElementById('speedInput').value)">Enviar s&lt;vel&gt;</button>
+      <input id="accInput" type="number" placeholder="Aceleração ex.: 300">
+      <button onclick="sendCmd('a' + document.getElementById('accInput').value)">Enviar a&lt;acc&gt;</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input id="moveInput" type="number" placeholder="Movimento relativo ex.: 200">
+      <button onclick="sendCmd('m' + document.getElementById('moveInput').value)">Enviar m&lt;n&gt;</button>
+      <input id="posInput" type="number" placeholder="Posição absoluta ex.: 1000">
+      <button onclick="sendCmd('p' + document.getElementById('posInput').value)">Enviar p&lt;n&gt;</button>
+    </div>
+  </div>
 
-  <script>
-    var firebaseConfig = {
-      apiKey: "AIzaSyAatJ7zCMGoDPQTdsKOJIwP8pp739_j62c",
-      authDomain: "eletrospinnig.firebaseapp.com",
-      databaseURL: "https://eletrospinnig-default-rtdb.firebaseio.com",
-      projectId: "eletrospinnig",
-      storageBucket: "eletrospinnig.firebasestorage.app",
-      messagingSenderId: "880625441630",
-      appId: "1:880625441630:web:bf2c5e07705cf1716bcdcf",
-      measurementId: "G-0R8X4WP358"
-    };
-    firebase.initializeApp(firebaseConfig);
-    var db = firebase.database();
+  <div class="card">
+    <h2>Status do sistema</h2>
+    <div class="grid">
+      <div class="status"><div class="label">Velocidade</div><div id="speed" class="value">--</div></div>
+      <div class="status"><div class="label">Aceleração</div><div id="acc" class="value">--</div></div>
+      <div class="status"><div class="label">Posição atual</div><div id="currentPos" class="value">--</div></div>
+      <div class="status"><div class="label">Posição alvo</div><div id="targetPos" class="value">--</div></div>
+      <div class="status"><div class="label">Distance to go</div><div id="distanceToGo" class="value">--</div></div>
+      <div class="status"><div class="label">Contínuo</div><div id="continuous" class="value">--</div></div>
+      <div class="status"><div class="label">Movendo para alvo</div><div id="moving" class="value">--</div></div>
+      <div class="status"><div class="label">Fim de curso</div><div id="endstopText" class="value">--</div></div>
+      <div class="status"><div class="label">A0</div><div id="a0" class="value">--</div></div>
+      <div class="status"><div class="label">Último comando</div><div id="lastCommand" class="value mono">--</div></div>
+      <div class="status"><div class="label">Origem do comando</div><div id="lastSource" class="value">--</div></div>
+      <div class="status"><div class="label">Último evento</div><div id="lastEvent" class="value">--</div></div>
+    </div>
+  </div>
 
-    // elements
-    const localIpEl = document.getElementById('localip');
-    const a0El = document.getElementById('a0');
-    const voltEl = document.getElementById('volt');
+  <div class="card">
+    <h2>Leitura dos pinos usados no código</h2>
+    <div class="grid">
+      <div class="status"><div class="label">STEP D1</div><div id="stepPin" class="value">--</div></div>
+      <div class="status"><div class="label">DIR D2</div><div id="dirPin" class="value">--</div></div>
+      <div class="status"><div class="label">SWITCH D5</div><div id="switchPin" class="value">--</div></div>
+      <div class="status"><div class="label">ENDSTOP D6</div><div id="endstopPin" class="value">--</div></div>
+      <div class="status"><div class="label">ENABLE D7</div><div id="enPin" class="value">--</div></div>
+      <div class="status"><div class="label">BUZZER D0</div><div id="buzzerPin" class="value">--</div></div>
+      <div class="status"><div class="label">LED D4</div><div id="ledPin" class="value">--</div></div>
+    </div>
+  </div>
+</div>
 
-    const btnD0 = document.getElementById('btn-d0');
-    const btnD1 = document.getElementById('btn-d1');
-    const btnD2 = document.getElementById('btn-d2');
-    const btnD3 = document.getElementById('btn-d3');
-    const btnD4 = document.getElementById('btn-d4');
-    const btnD5 = document.getElementById('btn-d5');
-    const btnD6 = document.getElementById('btn-d6');
-    const btnD7 = document.getElementById('btn-d7');
-    const btnD8 = document.getElementById('btn-d8');
-    const btnLED = document.getElementById('btn-led');
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script>
+  var firebaseConfig = {
+    apiKey: "AIzaSyAatJ7zCMGoDPQTdsKOJIwP8pp739_j62c",
+    authDomain: "eletrospinnig.firebaseapp.com",
+    databaseURL: "https://eletrospinnig-default-rtdb.firebaseio.com",
+    projectId: "eletrospinnig",
+    storageBucket: "eletrospinnig.firebasestorage.app",
+    messagingSenderId: "880625441630",
+    appId: "1:880625441630:web:bf2c5e07705cf1716bcdcf",
+    measurementId: "G-0R8X4WP358"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-    const tD1 = document.getElementById('timer-d1');
-    const tD2 = document.getElementById('timer-d2');
+  function text(id, value){ document.getElementById(id).textContent = value ?? '--'; }
+  function boolText(v){ return Number(v) ? 'SIM' : 'NÃO'; }
 
-    db.ref('/state').on('value', snap => {
-      const s = snap.val() || {};
-      if (s.ip) localIpEl.innerText = s.ip;
+  function sendCmd(cmd){
+    if(!cmd) return;
+    db.ref('/commands/serial').set(String(cmd));
+  }
+  function sendTypedCommand(){
+    const input = document.getElementById('cmdInput');
+    sendCmd(input.value.trim());
+    input.value = '';
+  }
+  function refreshStatus(){ db.ref('/commands/refresh').set('1'); }
 
-      if (s.a0 !== undefined) {
-        a0El.innerText = s.a0;
-        let v = (3.3 * Number(s.a0)) / 1023.0;
-        voltEl.innerText = v.toFixed(2) + " V";
-      }
+  document.getElementById('cmdInput').addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') sendTypedCommand();
+  });
 
-      if (s.d0) btnD0.classList.add('on'); else btnD0.classList.remove('on');
-      if (s.d1) btnD1.classList.add('on'); else btnD1.classList.remove('on');
-      if (s.d2) btnD2.classList.add('on'); else btnD2.classList.remove('on');
-      if (s.d3) btnD3.classList.add('on'); else btnD3.classList.remove('on');
-      if (s.d4) btnD4.classList.add('on'); else btnD4.classList.remove('on');
-      if (s.d5) btnD5.classList.add('on'); else btnD5.classList.remove('on');
-      if (s.d6) btnD6.classList.add('on'); else btnD6.classList.remove('on');
-      if (s.d7) btnD7.classList.add('on'); else btnD7.classList.remove('on');
-      if (s.d8) btnD8.classList.add('on'); else btnD8.classList.remove('on');
-      if (s.led) btnLED.classList.add('on'); else btnLED.classList.remove('on');
-    });
+  db.ref('/status').on('value', snap => {
+    const s = snap.val() || {};
+    text('modeText', s.mode_text);
+    text('motorText', s.motor_text);
+    text('speed', s.speed);
+    text('acc', s.acceleration);
+    text('currentPos', s.current_position);
+    text('targetPos', s.target_position);
+    text('distanceToGo', s.distance_to_go);
+    text('continuous', boolText(s.continuous_running));
+    text('moving', boolText(s.moving_to_target));
+    text('endstopText', s.endstop_text);
+    text('lastCommand', s.last_command_text);
+    text('lastSource', s.last_command_source);
+    text('lastEvent', s.last_event);
+    text('ip', s.ip);
 
-    db.ref('/timers').on('value', snap => {
-      const t = snap.val() || {};
-      if (t.d1) tD1.innerText = t.d1;
-      if (t.d2) tD2.innerText = t.d2;
-    });
+    const wifiPill = document.getElementById('wifiPill');
+    const wifiOk = s.wifi_state === 'CONECTADO';
+    wifiPill.textContent = 'Wi‑Fi: ' + (s.wifi_state || '--');
+    wifiPill.className = 'pill ' + (wifiOk ? 'ok' : 'bad');
+  });
 
-    function sendCmd(pin, cmd){
-      db.ref('/commands/' + pin).set(cmd);
-    }
-
-    btnD0.onclick = () => sendCmd('d0','toggle');
-    btnD1.onclick = () => sendCmd('d1','toggle');
-    btnD2.onclick = () => sendCmd('d2','toggle');
-    btnD3.onclick = () => sendCmd('d3','toggle');
-    btnD4.onclick = () => sendCmd('d4','toggle');
-    btnD5.onclick = () => sendCmd('d5','toggle');
-    btnD6.onclick = () => sendCmd('d6','toggle');
-    btnD7.onclick = () => sendCmd('d7','toggle');
-    btnD8.onclick = () => sendCmd('d8','toggle');
-    btnLED.onclick = () => sendCmd('led','toggle');
-
-    setInterval(()=>{
-      db.ref('/meta/last_panel_ping').set(Date.now());
-    },7000);
-  </script>
+  db.ref('/state').on('value', snap => {
+    const s = snap.val() || {};
+    text('a0', s.a0);
+    text('stepPin', s.step_pin);
+    text('dirPin', s.dir_pin);
+    text('switchPin', s.switch_pin);
+    text('endstopPin', s.endstop_pin);
+    text('enPin', s.en_pin);
+    text('buzzerPin', s.buzzer_pin);
+    text('ledPin', s.led_pin);
+    if (s.ip) text('ip', s.ip);
+  });
+</script>
 </body>
 </html>
